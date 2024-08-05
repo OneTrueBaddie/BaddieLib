@@ -17,8 +17,8 @@ namespace Baddie.Saving.Cloud
 
     public static class CloudSaver
     {
-        public static Dictionary<string, Item> LoadedData = new();
-        public static Dictionary<string, object> SavedData = new();
+        public static volatile Dictionary<string, Item> LoadedData = new();
+        public static volatile Dictionary<string, object> SavedData = new();
         public static string UUID = null;
         public static bool FirstTime = true;
 
