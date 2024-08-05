@@ -8,6 +8,9 @@ namespace Baddie.Commons
     using System.Threading.Tasks;
     using System.Collections.Generic;
     using UnityEngine;
+    using Unity.Services.Core;
+    using System.Collections;
+    using Unity.Services.Authentication;
 
 #if PHOTON_UNITY_NETWORKING
     using Photon.Pun;
@@ -260,6 +263,125 @@ namespace Baddie.Commons
 
                 return result.FindAll(x => x != null).ToArray();
             });
+        }
+    }
+
+    public static class Services
+    {
+        public static string UUID;
+        static bool FirstTime = true;
+
+        public static event Action OnSignIn = () =>
+        {
+            UUID = AuthenticationService.Instance.PlayerId;
+        };
+        public static event Action OnSignOut = () =>
+        {
+            UUID = null;
+
+            ResetEvents();
+
+            Debugger.Log($"Signed out from unity service ({UUID})", LogColour.Yellow);
+        };
+        public static event Action<RequestFailedException> OnSignInFail = (request) =>
+        {
+
+        };
+
+        static Action OnSignInOriginal = OnSignIn;
+        static Action OnSignOutOriginal = OnSignOut;
+        static Action<RequestFailedException> OnSignInFailOriginal = OnSignInFail;
+
+        /// <summary>
+        /// Initialize the unity service
+        /// </summary>
+        /// <returns></returns>
+        public static Task Setup()
+        {
+            return UnityServices.State == ServicesInitializationState.Uninitialized ? UnityServices.InitializeAsync() : null;
+        }
+
+        /// <summary>
+        /// Sign into the unity service
+        /// </summary>
+        /// <returns></returns>
+        public static Task SignIn()
+        {
+            if (FirstTime)
+            {
+                AuthenticationService.Instance.SignedIn += OnSignIn;
+                AuthenticationService.Instance.SignedOut += OnSignOut;
+                AuthenticationService.Instance.SignInFailed += OnSignInFail;
+
+                FirstTime = false;
+            }
+
+            return AuthenticationService.Instance.SignInAnonymouslyAsync();
+        }
+
+        /// <summary>
+        /// Sign out of the unity service
+        /// </summary>
+        public static async void SignOut()
+        {
+            if (!IsSetup())
+                await Setup();
+
+            AuthenticationService.Instance.SignOut();
+        }
+
+        /// <summary>
+        /// Sign out of the unity service and clear all credentials
+        /// </summary>
+        /// <param name="clearCredentials"></param>
+        public static void SignOut(bool clearCredentials)
+        {
+            AuthenticationService.Instance.SignOut(clearCredentials);
+        }
+
+        /// <summary>
+        /// Invoke a job once unity services is initialized, if it already is then the job will instantly invoke
+        /// </summary>
+        /// <param name="job"></param>
+        /// <returns></returns>
+        public static IEnumerator WaitUntilInitialized(Action job)
+        {
+            yield return new WaitUntil(IsSetup);
+
+            job?.Invoke();
+        }
+
+        /// <summary>
+        /// Invoke a job once the user is signed in, if they already are then the job will instantly invoke
+        /// </summary>
+        /// <param name="job"></param>
+        /// <returns></returns>
+        public static IEnumerator WaitUntilSignedIn(Action job)
+        {
+            yield return new WaitUntil(IsSignedIn);
+
+            job?.Invoke();
+        }
+
+        /// <summary>
+        /// Check if the unity service is initialized
+        /// </summary>
+        /// <returns>(bool) true if it is, false if not</returns>
+        public static bool IsSetup() { return UnityServices.State == ServicesInitializationState.Initialized; }
+
+        /// <summary>
+        /// Check if the user is signed in
+        /// </summary>
+        /// <returns>(bool) true if they are, false if not</returns>
+        public static bool IsSignedIn() { return UnityServices.State == ServicesInitializationState.Initialized && AuthenticationService.Instance.IsSignedIn; }
+
+        static void ResetEvents()
+        {
+            OnSignIn = OnSignInOriginal;
+            OnSignOut = OnSignOutOriginal;
+            OnSignInFail = OnSignInFailOriginal;
+
+            FirstTime = true;
         }
     }
 }

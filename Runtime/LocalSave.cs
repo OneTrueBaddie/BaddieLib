@@ -44,7 +44,9 @@ namespace Baddie.Saving.Local
         /// <param name="data"></param>
         public static async void SaveAndEncrypt(string name, object data)
         {
-            var json = await Encrypt(JsonUtility.ToJson(data, true));
+            var key = await RequestAPI.GetCloudValue<string>("GetEncryption", "Key");
+            var iv = await RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
+            var json = await Encrypt(JsonUtility.ToJson(data, true), key, iv);
 
             File.WriteAllText($"{SavePath}\\{name}.json", json);
         }
@@ -113,7 +115,7 @@ namespace Baddie.Saving.Local
         /// <returns>(bool, T) weither or not the task succeeded and the value of the loaded save</returns>
         public static Task<(bool, T)> TryLoadSave<T>(string name)
         {
-            return Task.Run(async () =>
+            return Task.Run(() =>
             {
                 string path = SavePath + $"{name}.json";
                 T data = default;
@@ -142,7 +144,7 @@ namespace Baddie.Saving.Local
         /// <param name="name"></param>
         /// <param name="data"></param>
         /// <returns>(bool, T) weither or not the task succeeded and the value of the loaded save</returns>
-        public static Task<(bool, T)> TryLoadSave<T>(string name, bool encrypted)
+        public static Task<(bool, T)> TryLoadSave<T>(string name, string key, byte[] iv)
         {
             return Task.Run(async () =>
             {
@@ -154,7 +156,7 @@ namespace Baddie.Saving.Local
 
                 try
                 {
-                    string json = await Decrypt(File.ReadAllText(path));
+                    string json = await Decrypt(File.ReadAllText(path), key, iv);
                     data = JsonUtility.FromJson<T>(json);
                 }
                 catch (Exception e)
@@ -276,12 +278,9 @@ namespace Baddie.Saving.Local
         /// <returns>(int) Number of save files</returns>
         public static int GetSaveCount() { return Directory.GetFiles(SavePath).Length; }
 
-        static Task<string> Encrypt(string plainText)
-        {
-            var key = RequestAPI.GetCloudValue<string>("GetEncryption", "Key");
-            var iv = RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
-            
-            return Task.Run(async () =>
+        static Task<string> Encrypt(string plainText, string key, byte[] iv)
+        {      
+            return Task.Run(() =>
             {
                 using (var aes = Aes.Create())
                 {
@@ -316,17 +315,12 @@ namespace Baddie.Saving.Local
             });
         }
 
-        static Task<string> Decrypt(string cipherText)
-        {
-            var key = RequestAPI.GetCloudValue<string>("GetEncryption", "Key");
-            var iv = RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
-            
+        static Task<string> Decrypt(string cipherText, string key, byte[] iv)
+        {     
             return Task.Run(() =>
             {
                 using (var aes = Aes.Create())
                 {
-                    string result = "";
-
                     if (string.IsNullOrEmpty(key))
                     {
                         Utils.Debugger.Log("Could not decrypt text, key is null or empty", LogColour.Red, Utils.LogType.Error);

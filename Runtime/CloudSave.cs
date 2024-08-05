@@ -3,15 +3,11 @@ namespace Baddie.Saving.Cloud
     using Baddie.Commons;
     using Baddie.Utils;
     using System.Collections.Generic;
-    using Unity.Services.Authentication;
     using Unity.Services.CloudSave;
     using Unity.Services.CloudSave.Models;
-    using Unity.Services.Core;
     using System;
-    using System.Collections;
     using System.Linq;
     using System.Reflection;
-    using UnityEngine;
     using System.Threading.Tasks;
     using System.Diagnostics;
 
@@ -19,76 +15,14 @@ namespace Baddie.Saving.Cloud
     {
         public static volatile Dictionary<string, Item> LoadedData = new();
         public static volatile Dictionary<string, object> SavedData = new();
-        public static string UUID = null;
-        public static bool FirstTime = true;
 
-        public static event Action OnSignIn = () =>
+        public static async void Save()
         {
-            GetRawData();
-
-            UUID = GetUUID();
-        };
-        public static event Action OnSignOut = () =>
-        {
-            ResetEvents();
-
-            Utils.Debugger.Log($"Signed out from cloud ({UUID})", LogColour.Yellow);
-
-            UUID = null;
-            FirstTime = true;
-        };
-        public static event Action<RequestFailedException> OnSignInFail = (request) =>
-        {
-            UUID = null;
-        };
-
-        static Action OnSignInOriginal = OnSignIn;
-        static Action OnSignOutOriginal = OnSignOut;
-        static Action<RequestFailedException> OnSignInFailOriginal = OnSignInFail;
-
-        public static async void Setup()
-        {
-            SignOut();
-
-            if (UnityServices.State == ServicesInitializationState.Uninitialized)
+            if (Services.IsSignedIn())
             {
-                await UnityServices.InitializeAsync();
-
-                // We only want to do this the first ever time, otherwise it duplicates the actions
-                if (FirstTime)
-                {
-                    AuthenticationService.Instance.SignedIn += OnSignIn;
-                    AuthenticationService.Instance.SignedOut += OnSignOut;
-                    AuthenticationService.Instance.SignInFailed += OnSignInFail;
-                    FirstTime = false;
-                }
-
-                SignIn();
-            }
-        }
-
-        public static async void SignIn()
-        {
-            if (UnityServices.State == ServicesInitializationState.Uninitialized)
-                Setup();
-
-            await AuthenticationService.Instance.SignInAnonymouslyAsync();
-        }
-
-        public static void SignOut()
-        {
-            if (IsSignedIn())
-                AuthenticationService.Instance.SignOut();
-        }
-
-        public static async void SignOutAndSave()
-        {
-            if (IsSignedIn())
-            {
+                await GetRawData();
                 await ConvertToCloud();
                 await SaveToCloud();
-
-                AuthenticationService.Instance.SignOut();
             }
         }
 
@@ -101,25 +35,21 @@ namespace Baddie.Saving.Cloud
         }
 
         /// <summary>
-        /// Invoke a job once the user is connected to the cloud, if the user is already connected it will instantly invoke
-        /// </summary>
-        /// <param name="job"></param>
-        /// <returns></returns>
-        public static IEnumerator WaitForCloud(Action job)
-        {
-            if (UnityServices.State == ServicesInitializationState.Uninitialized)
-                Setup();
-
-            yield return new WaitUntil(IsSignedIn);
-
-            job?.Invoke();
-        }
-
-        /// <summary>
         /// Converts all CloudSave variables from all scripts and then saves them to the cloud
         /// </summary>
         public static Task ConvertToCloud()
         {
+            if (!Services.IsSetup())
+            {
+                Utils.Debugger.Log("Cannot covert to cloud, unity services is not setup", LogColour.Red, Utils.LogType.Error);
+                return null;
+            }
+            if (!Services.IsSignedIn())
+            {
+                Utils.Debugger.Log("Cannot covert to cloud, player is not signed into unity services", LogColour.Red, Utils.LogType.Error);
+                return null;
+            }
+
             object[] scripts = Reflection.GetInstances(typeof(CloudSaveAttribute));
 
             return Task.Run(() =>
@@ -158,7 +88,7 @@ namespace Baddie.Saving.Cloud
                     }
                 }
 
-                Utils.Debugger.Log($"Converted current data to cloud formatting ({UUID}, {sw.Elapsed.TotalMilliseconds:F3}ms)", LogColour.Green);
+                Utils.Debugger.Log($"Converted current data to cloud formatting ({Services.UUID}, {sw.Elapsed.TotalMilliseconds:F3}ms)", LogColour.Green);
             });
         }
 
@@ -168,6 +98,17 @@ namespace Baddie.Saving.Cloud
         /// </summary>
         public static Task ConvertFromCloud()
         {
+            if (!Services.IsSetup())
+            {
+                Utils.Debugger.Log("Cannot covert from cloud, unity services is not setup", LogColour.Red, Utils.LogType.Error);
+                return null;
+            }
+            if (!Services.IsSignedIn()) 
+            {
+                Utils.Debugger.Log("Cannot covert from cloud, player is not signed into unity services", LogColour.Red, Utils.LogType.Error);
+                return null;
+            }
+
             object[] scripts = Reflection.GetInstances(typeof(CloudSaveAttribute));
 
             return Task.Run(() =>
@@ -212,39 +153,14 @@ namespace Baddie.Saving.Cloud
                 }
 
                 sw.Stop();
-                Utils.Debugger.Log($"Coverted and loaded raw data from the cloud ({UUID}, {sw.Elapsed.TotalMilliseconds:F3}ms)", LogColour.Green);
+                Utils.Debugger.Log($"Coverted and loaded raw data from the cloud ({Services.UUID}, {sw.Elapsed.TotalMilliseconds:F3}ms)", LogColour.Green);
             });
         }
 
         public static async void DeleteAllData()
         {
-            Utils.Debugger.Log($"Cleared all cloud data ({UUID})", LogColour.Yellow);
+            Utils.Debugger.Log($"Cleared all cloud data ({Services.UUID})", LogColour.Yellow);
             await CloudSaveService.Instance.Data.Player.DeleteAllAsync();
-        }
-
-        public static void ResetEvents()
-        {
-            OnSignIn = OnSignInOriginal;
-            OnSignOut = OnSignOutOriginal;
-            OnSignInFail = OnSignInFailOriginal;
-        }
-
-        /// <summary>
-        /// Get the access token of the current player signed into the cloud anonymously
-        /// </summary>
-        /// <returns>(string) Access token of current player</returns>
-        public static string GetUUID() { return AuthenticationService.Instance.PlayerId; }
-
-        /// <summary>
-        /// Check if the current player is signed into the cloud and that the cloud is setup
-        /// </summary>
-        /// <returns>(bool) true if the player is signed in, false if not. Also returns false if the cloud instance is not initialized</returns>
-        public static bool IsSignedIn()
-        {
-            if (UnityServices.State != ServicesInitializationState.Initialized)
-                return false;
-
-            return AuthenticationService.Instance.IsSignedIn;
         }
 
         /// <summary>
@@ -253,10 +169,11 @@ namespace Baddie.Saving.Cloud
         /// <returns></returns>
         public static bool HasCloudData() { return LoadedData.Count > 0; }
 
-        static async void GetRawData()
+        static Task<Dictionary<string, Item>> GetRawData()
         {
-            LoadedData = await CloudSaveService.Instance.Data.Player.LoadAllAsync();
-            Utils.Debugger.Log($"Loaded raw data from cloud ({UUID})", LogColour.Green);
+            Utils.Debugger.Log($"Loaded raw data from cloud ({Services.UUID})", LogColour.Green);
+
+            return CloudSaveService.Instance.Data.Player.LoadAllAsync();
         }
     }
 }

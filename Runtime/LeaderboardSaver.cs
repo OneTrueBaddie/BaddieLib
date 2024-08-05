@@ -1,6 +1,6 @@
 namespace Baddie.Saving.Leaderboard
 {
-    using Baddie.Saving.Cloud;
+    using Baddie.Commons;
     using Baddie.Utils;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
@@ -15,8 +15,13 @@ namespace Baddie.Saving.Leaderboard
     {
         static LeaderboardSaver()
         {
-            if (!CloudSaver.IsSignedIn())
-                CloudSaver.SignIn();
+            if (!Services.IsSignedIn())
+                Setup();
+        }
+
+        static async void Setup()
+        {
+            await Services.SignIn();
         }
 
         public static async void ChangePlayerName(string name)
@@ -31,7 +36,7 @@ namespace Baddie.Saving.Leaderboard
         /// <param name="score"></param>
         public static async void AddScore(string leaderboard, double score)
         {
-            if (!CloudSaver.IsSignedIn())
+            if (!Services.IsSignedIn())
             {
                 Debugger.Log("Cannot add score to leaderboard, make sure UnityServices is initilized and the player is signed in", LogColour.Red, LogType.Error);
                 return;
@@ -49,7 +54,7 @@ namespace Baddie.Saving.Leaderboard
         /// <param name="metadata"></param>
         public static async void AddScore(string leaderboard, double score, Dictionary<string, string> metadata)
         {
-            if (!CloudSaver.IsSignedIn())
+            if (!Services.IsSignedIn())
             {
                 Debugger.Log("Cannot add score to leaderboard, make sure UnityServices is initilized and the player is signed in", LogColour.Red, LogType.Error);
                 return;
@@ -121,7 +126,7 @@ namespace Baddie.Saving.Leaderboard
 
                 await LeaderboardsService.Instance.AddPlayerScoreAsync(leaderboard, entry.Score, new() { Metadata = null });
 
-                Debugger.Log($"Successfully wiped all metadata ({CloudSaver.UUID})", LogColour.Green);
+                Debugger.Log($"Successfully wiped all metadata ({Services.UUID})", LogColour.Green);
             }
             catch (Exception e)
             {
