@@ -102,7 +102,7 @@ namespace Baddie.Saving.Local
                 }
 
                 sw.Stop();
-                Utils.Debugger.Log($"Save operation completed in {sw.ElapsedMilliseconds} ms", LogColour.Green);
+                Utils.Debugger.Log($"Automatically saved data to local ({sw.Elapsed.TotalMilliseconds}ms)", LogColour.Green);
             });
         }
 
