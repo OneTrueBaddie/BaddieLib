@@ -13,13 +13,6 @@ namespace Baddie.Saving.Local
     using System.Collections.Generic;
     using System.Reflection;
 
-    public enum PrefType
-    {
-        Int,
-        Float,
-        String
-    }
-
     public class LocalSaver
     {
         public static string SavePath = $"{Path.GetPathRoot(Environment.SystemDirectory)}Users\\{Environment.UserName.ToLower()}\\Documents\\My Games\\{Application.companyName}\\{Application.productName}";
@@ -150,22 +143,20 @@ namespace Baddie.Saving.Local
         /// <param name="name"></param>
         /// <param name="value"></param>
         /// <param name="type"></param>
-        public static void SavePlayerPref(string name, object value, PrefType type)
+        public static void SavePlayerPref(string name, object value)
         {
+            Type type = value.GetType();
+
             try
             {
-                switch (type)
-                {
-                    case PrefType.Int:
-                        PlayerPrefs.SetInt(name, (int)value);
-                        break;
-                    case PrefType.Float:
-                        PlayerPrefs.SetFloat(name, (float)value);
-                        break;
-                    case PrefType.String:
-                        PlayerPrefs.SetString(name, (string)value);
-                        break;
-                }
+                if (type == typeof(int))
+                    PlayerPrefs.SetInt(name, (int)value);
+                else if (type == typeof(float))
+                    PlayerPrefs.SetFloat(name, (float)value);
+                else if (type == typeof(string))
+                    PlayerPrefs.SetString(name, (string)value);
+                else
+                    Utils.Debugger.Log($"Cannot save a variable with type 'type.Name' into PlayerPrefs, Unity only supports types Int, Float and String", LogColour.Yellow, Utils.LogType.Warning)
 
                 PlayerPrefs.Save();
             }
@@ -181,8 +172,10 @@ namespace Baddie.Saving.Local
         /// <param name="name"></param>
         /// <param name="type"></param>
         /// <returns>(T) The value of the given key if found, otherwise returns the default value of T</returns>
-        public static T LoadPlayerPref<T>(string name, PrefType type)
+        public static T LoadPlayerPref<T>(string name)
         {
+            Type type = typeof(T);
+
             try
             {
                 if (!PlayerPrefs.HasKey(name))
@@ -191,13 +184,16 @@ namespace Baddie.Saving.Local
                     return default;
                 }
 
-                return type switch
-                {
-                    PrefType.Int => (T)(object)PlayerPrefs.GetInt(name),
-                    PrefType.Float => (T)(object)PlayerPrefs.GetFloat(name),
-                    PrefType.String => (T)(object)PlayerPrefs.GetString(name),
-                    _ => default
-                }; ;
+                if (type == typeof(int))
+                    return (T)Convert.ChangeType(PlayerPrefs.GetInt(name), typeof(T));
+                else if (type == typeof(float))
+                    return (T)Convert.ChangeType(PlayerPrefs.GetFloat(name), typeof(T));
+                else if (type == typeof(string))
+                    return (T)Convert.ChangeType(PlayerPrefs.GetString(name), typeof(T));
+                else 
+                    Utils.Debugger.Log($"Cannot load a variable with type 'type.Name' from PlayerPrefs, Unity only supports types Int, Float and String", LogColour.Yellow, Utils.LogType.Warning)
+                
+                return default;
             }
             catch (Exception e)
             {
@@ -213,9 +209,10 @@ namespace Baddie.Saving.Local
         /// <param name="type"></param>
         /// <param name="data"></param>
         /// <returns>(bool) True if the key was found, false if not</returns>
-        public static bool LoadPlayerPref<T>(string name, PrefType type, out T data)
+        public static bool LoadPlayerPref<T>(string name, out T data)
         {
             data = default;
+            Type type = data.GetType();
 
             if (!PlayerPrefs.HasKey(name))
             {
@@ -225,20 +222,16 @@ namespace Baddie.Saving.Local
 
             try
             {
-                switch (type)
-                {
-                    case PrefType.Int:
-                        data = (T)(object)PlayerPrefs.GetInt(name);
-                        return true;
-                    case PrefType.Float:
-                        data = (T)(object)PlayerPrefs.GetFloat(name);
-                        return true;
-                    case PrefType.String:
-                        data = (T)(object)PlayerPrefs.GetString(name);
-                        return true;
-                    default:
-                        return false;
-                }
+                if (type == typeof(int))
+                    data = (T)Convert.ChangeType(PlayerPrefs.GetInt(name), typeof(T));
+                else if (type == typeof(float))
+                    data = (T)Convert.ChangeType(PlayerPrefs.GetFloat(name), typeof(T));
+                else if (type == typeof(string))
+                    data = (T)Convert.ChangeType(PlayerPrefs.GetString(name), typeof(T));
+                else
+                    return false;
+
+                return true;
             }
             catch (Exception e)
             {
