@@ -44,10 +44,11 @@ namespace Baddie.Saving.Local
         /// <param name="data"></param>
         public static async void SaveAndEncrypt(string name, object data)
         {
-            var path = $"{SavePath}\\{name}.json";
+            var key = await RequestAPI.GetCloudValue<string>("GetEncryption", "Key");
+            var iv = await RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
             var json = await Encrypt(JsonUtility.ToJson(data, true));
 
-            File.WriteAllText(path, json);
+            File.WriteAllText($"{SavePath}\\{name}.json", json);
         }
 
         /// <summary>
@@ -246,15 +247,12 @@ namespace Baddie.Saving.Local
         /// <returns>(int) Number of save files</returns>
         public static int GetSaveCount() { return Directory.GetFiles(SavePath).Length; }
 
-        static Task<string> Encrypt(string plainText)
+        static Task<string> Encrypt(string plainText, string key, byte[] iv)
         {
             return Task.Run(async () =>
             {
                 using (var aes = Aes.Create())
                 {
-                    string key = await RequestAPI.GetCloudValue<string>("GetEncryption", "Key");
-                    byte[] iv = await RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
-
                     if (string.IsNullOrEmpty(key))
                     {
                         Utils.Debugger.Log("Could not encrypt text, key is null or empty", LogColour.Red, Utils.LogType.Error);
@@ -278,25 +276,18 @@ namespace Baddie.Saving.Local
                         sw.Write(plainText);
                     }
 
-                    key = null;
-                    iv = null;
-                    aes.Key = null;
-                    aes.IV = null;
-
                     return Convert.ToBase64String(ms.ToArray());
                 }
             });
         }
 
-        static Task<string> Decrypt(string cipherText)
+        static Task<string> Decrypt(string cipherText, string key, byte[] iv)
         {
-            return Task.Run(async () =>
+            return Task.Run(() =>
             {
                 using (var aes = Aes.Create())
                 {
                     string result = "";
-                    string key = await RequestAPI.GetCloudValue<string>("GetEncryption", "Key");
-                    byte[] iv = await RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
 
                     if (string.IsNullOrEmpty(key))
                     {
@@ -318,14 +309,7 @@ namespace Baddie.Saving.Local
                     using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
                     using var sr = new StreamReader(cs);
 
-                    result = sr.ReadToEnd();
-
-                    key = null;
-                    iv = null;
-                    aes.Key = null;
-                    aes.IV = null;
-
-                    return result;
+                    return sr.ReadToEnd();
                 }
             });
         }
