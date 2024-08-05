@@ -194,38 +194,35 @@ namespace Baddie.Commons
 
             foreach (var type in types)
             {
-                object instance = null;
-
                 if (type.BaseType == typeof(MonoBehaviour))
                 {
                     object[] found = UnityEngine.Object.FindObjectsOfType(type);
 
-                    if (found.Length > 0)
-                        instance = found.First(t => Attribute.IsDefined(t.GetType(), attribute));
-                    else
+                    if (found.Length == 0)
                         continue;
+
+                    foreach (var obj in found)
+                        result.Add(obj);
                 }
                 #if PHOTON_UNITY_NETWORKING
                 else if (type.BaseType == typeof(MonoBehaviourPun || type.BaseType == typeof(MonoBehaviourPunCallbacks)) 
                 {
                     object[] found = UnityEngine.Object.FindObjectsOfType(type);
 
-                    if (found.Length > 0)
-                        instance = found.First(t => Attribute.IsDefined(t.GetType(), attribute));
-                    else
+                    if (found.Length == 0)
                         continue;
+
+                    foreach (var obj in found)
+                        result.Add(obj);
                 }
                 #endif
                 else
                 {
-                    instance = Activator.CreateInstance(type);
+                    result.Add(Activator.CreateInstance(type));
                 }
-
-                if (instance != null)
-                    result.Add(instance);
             }
 
-            return result.ToArray();
+            return result.FindAll(x => x != null).ToArray();
         }
 
         /// <summary>
@@ -258,13 +255,10 @@ namespace Baddie.Commons
                     }
                     #endif
 
-                    object instance = Activator.CreateInstance(type);
-
-                    if (instance != null)
-                        result.Add(instance);
+                    result.Add(Activator.CreateInstance(type));
                 }
 
-                return result.ToArray();
+                return result.FindAll(x => x != null).ToArray();
             });
         }
     }
