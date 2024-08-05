@@ -11,7 +11,7 @@ namespace Baddie.Cloud.Requests
     {
         //static readonly HttpClient Client = new();
 
-        public static T GetCloudValue<T>(string methodName, string key, Dictionary<string, object> args = null)
+        public static Task<T> GetCloudValue<T>(string methodName, string key, Dictionary<string, object> args = null)
         {
             try
             {
@@ -25,7 +25,7 @@ namespace Baddie.Cloud.Requests
             }
         }
 
-        public static Dictionary<string, object> GetCloudDictionary(string methodName, Dictionary<string, object> args = null)
+        public static Task<Dictionary<string, object>> GetCloudDictionary(string methodName, Dictionary<string, object> args = null)
         {
             try
             {
