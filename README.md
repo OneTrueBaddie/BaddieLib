@@ -16,4 +16,4 @@ A: I know
 A: Looks cool, lets me easily move it between projects and this is mostly for me as I do not consider it good enough to be used by others
 
 # Resources
-Git: https://git-scm.com/download/win
+[Download git to allow easier installation in Unity](https://git-scm.com/download/win)
