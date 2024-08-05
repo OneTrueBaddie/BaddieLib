@@ -278,6 +278,11 @@ namespace Baddie.Saving.Local
                         sw.Write(plainText);
                     }
 
+                    key = null;
+                    iv = null;
+                    aes.Key = null;
+                    aes.IV = null;
+
                     return Convert.ToBase64String(ms.ToArray());
                 }
             });
@@ -289,6 +294,7 @@ namespace Baddie.Saving.Local
             {
                 using (var aes = Aes.Create())
                 {
+                    string result = "";
                     string key = await RequestAPI.GetCloudValue<string>("GetEncryption", "Key");
                     byte[] iv = await RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
 
@@ -312,7 +318,14 @@ namespace Baddie.Saving.Local
                     using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
                     using var sr = new StreamReader(cs);
 
-                    return sr.ReadToEnd();
+                    result = sr.ReadToEnd();
+
+                    key = null;
+                    iv = null;
+                    aes.Key = null;
+                    aes.IV = null;
+
+                    return result;
                 }
             });
         }
