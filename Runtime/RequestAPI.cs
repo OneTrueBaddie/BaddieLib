@@ -11,37 +11,31 @@ namespace Baddie.Cloud.Requests
     {
         //static readonly HttpClient Client = new();
 
-        public static Task<T> GetCloudValue<T>(string methodName, string key, Dictionary<string, object> args = null)
+        public static T GetCloudValue<T>(string methodName, string key, Dictionary<string, object> args = null)
         {
-            return Task.Run(async () =>
+            try
             {
-                try
-                {
-                    var response = await CloudCodeService.Instance.CallEndpointAsync<Dictionary<string, object>>(methodName, args);
-                    return (T)Convert.ChangeType(response[key], typeof(T));
-                }
-                catch (Exception e)
-                {
-                    Debugger.Log($"Error trying to get cloud value from '{methodName}' with key '{key}', exception: {e}", LogColour.Red, LogType.Error);
-                    return default;
-                }
-            });
+                var response = await CloudCodeService.Instance.CallEndpointAsync<Dictionary<string, object>>(methodName, args);
+                return (T)Convert.ChangeType(response[key], typeof(T));
+            }
+            catch (Exception e)
+            {
+                Debugger.Log($"Error trying to get cloud value from '{methodName}' with key '{key}', exception: {e}", LogColour.Red, LogType.Error);
+                return default;
+            }
         }
 
-        public static Task<Dictionary<string, object>> GetCloudDictionary(string methodName, Dictionary<string, object> args = null)
+        public static Dictionary<string, object> GetCloudDictionary(string methodName, Dictionary<string, object> args = null)
         {
-            return Task.Run(async () =>
+            try
             {
-                try
-                {
-                    return await CloudCodeService.Instance.CallEndpointAsync<Dictionary<string, object>>(methodName, args);
-                }
-                catch (Exception e)
-                {
-                    Debugger.Log($"Error trying to get cloud dictionary from '{methodName}', exception: {e}", LogColour.Red, LogType.Error);
-                    return null;
-                }
-            });
+                return await CloudCodeService.Instance.CallEndpointAsync<Dictionary<string, object>>(methodName, args);
+            }
+            catch (Exception e)
+            {
+                Debugger.Log($"Error trying to get cloud dictionary from '{methodName}', exception: {e}", LogColour.Red, LogType.Error);
+                return null;
+            }
         }
     }
 }
