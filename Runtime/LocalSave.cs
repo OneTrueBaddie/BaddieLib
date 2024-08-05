@@ -142,7 +142,7 @@ namespace Baddie.Saving.Local
         /// <param name="name"></param>
         /// <param name="data"></param>
         /// <returns>(bool, T) weither or not the task succeeded and the value of the loaded save</returns>
-        public static Task<(bool, T)> TryLoadSave<T>(string name)
+        public static Task<(bool, T)> TryLoadSave<T>(string name, bool encrypted)
         {
             return Task.Run(async () =>
             {
