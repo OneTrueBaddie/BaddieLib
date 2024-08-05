@@ -1,0 +1,19 @@
+{
+  "name": "com.baddies-only.baddielib",
+  "version": "0.1.0",
+  "displayName": "Baddie Lib",
+  "description": "Random stuff",
+  "unity": "2022.3",
+  "author": {
+    "name": "Baddie",
+    "email": "aydenbaigan99@gmail.com"
+  },
+  "dependencies": {
+    "com.unity.collections": "1.2.4",
+    "com.unity.services.core": "1.13.0",
+    "com.unity.services.authentication": "3.3.3",
+    "com.unity.services.cloudsave": "3.2.0",
+    "com.unity.services.cloudcode": "2.7.1",
+    "com.unity.services.leaderboards": "2.1.0"
+  }
+}
