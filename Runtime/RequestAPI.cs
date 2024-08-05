@@ -18,7 +18,7 @@ namespace Baddie.Cloud.Requests
                 try
                 {
                     var response = await CloudCodeService.Instance.CallEndpointAsync<Dictionary<string, object>>(methodName, args);
-                    return (T)Convert.ChangeType(response, typeof(T));
+                    return (T)Convert.ChangeType(response[key], typeof(T));
                 }
                 catch (Exception e)
                 {
