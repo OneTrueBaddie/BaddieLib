@@ -156,7 +156,7 @@ namespace Baddie.Saving.Local
                 else if (type == typeof(string))
                     PlayerPrefs.SetString(name, (string)value);
                 else
-                    Utils.Debugger.Log($"Cannot save a variable with type 'type.Name' into PlayerPrefs, Unity only supports types Int, Float and String", LogColour.Yellow, Utils.LogType.Warning)
+                    Utils.Debugger.Log($"Cannot save a variable with type 'type.Name' into PlayerPrefs, Unity only supports types Int, Float and String", LogColour.Yellow, Utils.LogType.Warning);
 
                 PlayerPrefs.Save();
             }
@@ -191,7 +191,7 @@ namespace Baddie.Saving.Local
                 else if (type == typeof(string))
                     return (T)Convert.ChangeType(PlayerPrefs.GetString(name), typeof(T));
                 else 
-                    Utils.Debugger.Log($"Cannot load a variable with type 'type.Name' from PlayerPrefs, Unity only supports types Int, Float and String", LogColour.Yellow, Utils.LogType.Warning)
+                    Utils.Debugger.Log($"Cannot load a variable with type 'type.Name' from PlayerPrefs, Unity only supports types Int, Float and String", LogColour.Yellow, Utils.LogType.Warning);
                 
                 return default;
             }
