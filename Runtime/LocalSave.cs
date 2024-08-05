@@ -48,6 +48,9 @@ namespace Baddie.Saving.Local
             var iv = await RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
             var json = await Encrypt(JsonUtility.ToJson(data, true));
 
+            key = null;
+            iv = null;
+
             File.WriteAllText($"{SavePath}\\{name}.json", json);
         }
 
