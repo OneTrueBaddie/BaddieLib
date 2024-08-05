@@ -45,7 +45,7 @@ namespace Baddie.Saving.Local
         }
 
         /// <summary>
-        /// Save the given data to a file, if the file already exists then it will be overwritten
+        /// Save and encrypt the given data to a file, if the file already exists then it will be overwritten
         /// </summary>
         /// <param name="name"></param>
         /// <param name="data"></param>
@@ -59,7 +59,8 @@ namespace Baddie.Saving.Local
 
         /// <summary>
         /// Automatically saves all values that have the LocalSave attribute.
-        /// Some data may not be parsable, such as structs.
+        /// Some data may not be parsable, such as structs or lists/arrays that dont contain simple variables.
+        /// (I may have to add custom parsing to support more advanced variables)
         /// </summary>
         public static Task SaveAuto()
         {
@@ -179,7 +180,7 @@ namespace Baddie.Saving.Local
         /// </summary>
         /// <param name="name"></param>
         /// <param name="type"></param>
-        /// <returns>(T) The value of the given key if it is found, otherwise returns null</returns>
+        /// <returns>(T) The value of the given key if found, otherwise returns the default value of T</returns>
         public static T LoadPlayerPref<T>(string name, PrefType type)
         {
             try
