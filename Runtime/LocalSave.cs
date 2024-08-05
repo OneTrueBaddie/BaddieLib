@@ -142,7 +142,7 @@ namespace Baddie.Saving.Local
         /// <param name="name"></param>
         /// <param name="data"></param>
         /// <returns>(bool, T) weither or not the task succeeded and the value of the loaded save</returns>
-        public static Task<(bool, T)> TryLoadSave<T>(string name, string key, byte[] iv)
+        public static Task<(bool, T)> TryLoadSave<T>(string name)
         {
             return Task.Run(async () =>
             {
@@ -276,7 +276,7 @@ namespace Baddie.Saving.Local
         /// <returns>(int) Number of save files</returns>
         public static int GetSaveCount() { return Directory.GetFiles(SavePath).Length; }
 
-        static Task<string> Encrypt(string plainText, string key, byte[] iv)
+        static Task<string> Encrypt(string plainText)
         {
             var key = RequestAPI.GetCloudValue<string>("GetEncryption", "Key");
             var iv = RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
