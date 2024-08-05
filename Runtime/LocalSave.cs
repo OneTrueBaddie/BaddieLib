@@ -46,7 +46,7 @@ namespace Baddie.Saving.Local
         {
             var key = await RequestAPI.GetCloudValue<string>("GetEncryption", "Key");
             var iv = await RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
-            var json = await Encrypt(JsonUtility.ToJson(data, true));
+            var json = await Encrypt(JsonUtility.ToJson(data, true), key, iv);
 
             key = null;
             iv = null;
