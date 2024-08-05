@@ -375,6 +375,15 @@ namespace Baddie.Commons
         /// <returns>(bool) true if they are, false if not</returns>
         public static bool IsSignedIn() { return UnityServices.State == ServicesInitializationState.Initialized && AuthenticationService.Instance.IsSignedIn; }
 
+        /// <summary>
+        /// Change the current players name on Unity Services
+        /// </summary>
+        /// <param name="name"></param>
+        public static async void ChangePlayerName(string name)
+        {
+            await AuthenticationService.Instance.UpdatePlayerNameAsync(name);
+        }
+
         static void ResetEvents()
         {
             OnSignIn = OnSignInOriginal;

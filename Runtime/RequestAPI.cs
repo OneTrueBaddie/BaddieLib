@@ -9,6 +9,7 @@ namespace Baddie.Cloud.Requests
     using System.Reflection;
     using Baddie.Saving.Cloud;
     using Unity.Services.Core;
+    using Baddie.Commons;
 
     public static class RequestAPI
     {
@@ -17,18 +18,14 @@ namespace Baddie.Cloud.Requests
 
         static RequestAPI()
         {
-            if (UnityServices.State == ServicesInitializationState.Uninitialized)
-                Setup();
-        }
-
-        static async void Setup() 
-        { 
-            await UnityServices.InitializeAsync();
+            if (!Services.IsSetup())
+                Debugger.Log("Unity services is not setup, make sure it is setup otherwise RequestAPI will not work.", LogColour.Yellow, LogType.Warning);
+            if (!Services.IsSignedIn())
+                Debugger.Log("Current player is not signed into Unity Services, make sure they are signed in otherwise RequestAPI will not work.", LogColour.Yellow, LogType.Warning);
         }
 
         static async void CallEndpoint(string methodName, Dictionary<string, object> args = null)
         {
-
             CloudData = await CloudCodeService.Instance.CallEndpointAsync<Dictionary<string, object>>(methodName, args);
             Debugger.Log(CloudData.Count);
         }

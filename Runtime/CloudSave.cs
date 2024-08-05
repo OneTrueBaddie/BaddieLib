@@ -16,6 +16,14 @@ namespace Baddie.Saving.Cloud
         public static volatile Dictionary<string, Item> LoadedData = new();
         public static volatile Dictionary<string, object> SavedData = new();
 
+        static CloudSaver()
+        {
+            if (!Services.IsSetup())
+                Utils.Debugger.Log("Unity services is not setup, make sure it is setup otherwise CloudSaver will not work.", LogColour.Yellow, LogType.Warning);
+            if (!Services.IsSignedIn())
+                Utils.Debugger.Log("Current player is not signed into Unity Services, make sure they are signed in otherwise CloudSaver will not work.", LogColour.Yellow, LogType.Warning);
+        }
+
         public static async void Save()
         {
             if (Services.IsSignedIn())

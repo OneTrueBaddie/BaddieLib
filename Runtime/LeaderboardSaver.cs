@@ -15,18 +15,10 @@ namespace Baddie.Saving.Leaderboard
     {
         static LeaderboardSaver()
         {
+            if (!Services.IsSetup())
+                Debugger.Log("Unity services is not setup, make sure it is setup otherwise LeaderboardSaver will not work.", LogColour.Yellow, LogType.Warning);
             if (!Services.IsSignedIn())
-                Setup();
-        }
-
-        static async void Setup()
-        {
-            await Services.SignIn();
-        }
-
-        public static async void ChangePlayerName(string name)
-        {
-            await AuthenticationService.Instance.UpdatePlayerNameAsync(name);
+                Debugger.Log("Current player is not signed into Unity Services, make sure they are signed in otherwise LeaderboardSaver will not work.", LogColour.Yellow, LogType.Warning);
         }
 
         /// <summary>
@@ -68,12 +60,18 @@ namespace Baddie.Saving.Leaderboard
         /// Gets all the scores on the given leaderboard
         /// </summary>
         /// <param name="leaderboard"></param>
-        /// <returns></returns>
+        /// <returns>(LeaderboardScoresPage) All found scores</returns>
         public static async Task<LeaderboardScoresPage> GetScores(string leaderboard)
         {
             return await LeaderboardsService.Instance.GetScoresAsync(leaderboard);
         }
 
+        /// <summary>
+        /// Get all the player scores on the leaderboard with metadata
+        /// </summary>
+        /// <param name="leaderboard"></param>
+        /// <param name="metaData"></param>
+        /// <returns>(LeaderboardScoresPage) All found scores with metadata</returns>
         public static async Task<LeaderboardScoresPage> GetScores(string leaderboard, bool metaData)
         {
             return await LeaderboardsService.Instance.GetScoresAsync(leaderboard, new() { IncludeMetadata = metaData });
@@ -193,6 +191,12 @@ namespace Baddie.Saving.Leaderboard
             }
         }
 
+        /// <summary>
+        /// Changes or adds meta data to the current players leaderboard
+        /// </summary>
+        /// <param name="leaderboard"></param>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
         public static async void ChangeOrAddMetadata(string leaderboard, string key, string value)
         {
             try
@@ -219,6 +223,12 @@ namespace Baddie.Saving.Leaderboard
             }
         }
 
+        /// <summary>
+        /// Changes or adds meta data to the current players leaderboard
+        /// </summary>
+        /// <param name="leaderboard"></param>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
         public static async void ChangeOrAddMetadata(string leaderboard, string[] keys, string[] values)
         {
             try
