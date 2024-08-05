@@ -128,7 +128,38 @@ namespace Baddie.Saving.Local
 
                 try
                 {
-                    string json = await Decrypt(File.ReadAllText(path));
+                    string json = File.ReadAllText(path);
+                    data = JsonUtility.FromJson<T>(json);
+                }
+                catch (Exception e)
+                {
+                    Utils.Debugger.Log($"Error trying to load save '{name}', exception: {e}", LogColour.Red, Utils.LogType.Error);
+                    return (false, data);
+                }
+
+                return (true, data);
+            });
+        }
+
+        /// <summary>
+        /// Try to load and decrypt a save with its filename
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="data"></param>
+        /// <returns>(bool, T) weither or not the task succeeded and the value of the loaded save</returns>
+        public static Task<(bool, T)> TryLoadSave<T>(string name, string key, byte[] iv)
+        {
+            return Task.Run(async () =>
+            {
+                string path = SavePath + $"{name}.json";
+                T data = default;
+
+                if (!File.Exists(path))
+                    return (false, data);
+
+                try
+                {
+                    string json = await Decrypt(File.ReadAllText(path), key, iv);
                     data = JsonUtility.FromJson<T>(json);
                 }
                 catch (Exception e)
