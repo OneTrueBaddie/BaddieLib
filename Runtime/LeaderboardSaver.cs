@@ -7,7 +7,6 @@ namespace Baddie.Saving.Leaderboard
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using Unity.Services.Authentication;
     using Unity.Services.Leaderboards;
     using Unity.Services.Leaderboards.Models;
 

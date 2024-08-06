@@ -174,7 +174,7 @@ namespace Baddie.Saving.Cloud
         /// <summary>
         /// Checks if the current player has any data on the cloud
         /// </summary>
-        /// <returns></returns>
+        /// <returns>(bool) true if the player has data, false if not</returns>
         public static bool HasCloudData() { return LoadedData.Count > 0; }
 
         static Task<Dictionary<string, Item>> GetRawData()

@@ -142,9 +142,58 @@ namespace Baddie.Commons
         }
     }
 
-    public static class StringHelper
+    public static class ConversionHelper
     {
-        public static string FindValueInString(string original, string startAt, string endAt)
+        public static T FromDictionary<T>(Dictionary<string, object> d, string key) 
+        { 
+            if (d == null || d.Count == 0)
+            {
+                Debugger.Log("Cannot get value from dictionary as it is null or empty", LogColour.Yellow, Utils.LogType.Warning);
+                return default;
+            }
+
+            try
+            {
+                return d.TryGetValue(key, out var obj) ? (T)Convert.ChangeType(obj, typeof(T)) : default;
+            }
+            catch (Exception e)
+            {
+                Debugger.Log($"Error trying to get value from dictionary with key '{key}', exception: {e}", LogColour.Red, Utils.LogType.Error);
+                return default;
+            }
+        }
+
+        public static async Task<T> FromDictionaryAsync<T>(Dictionary<string, object> d, string key)
+        {
+            if (d == null || d.Count == 0)
+            {
+                Debugger.Log("Cannot get value from dictionary as it is null or empty", LogColour.Yellow, Utils.LogType.Warning);
+                return default;
+            }
+
+            try
+            {
+                return await Task.Run(() =>
+                {
+                    if (d.TryGetValue(key, out var obj))
+                    {
+                        if (typeof(T) == typeof(byte[]) && obj is string str)
+                            return (T)(object)Convert.FromBase64String(str);
+
+                        return (T)Convert.ChangeType(obj, typeof(T));
+                    }
+
+                    return default;
+                });
+            }
+            catch (Exception e)
+            {
+                Debugger.Log($"Error trying to get value from dictionary with key '{key}', exception: {e}", LogColour.Red, Utils.LogType.Error);
+                return default;
+            }
+        }
+
+        public static string FindInString(string original, string startAt, string endAt)
         {
             if (original.Contains(startAt) && original.Contains(endAt))
             {
@@ -157,7 +206,7 @@ namespace Baddie.Commons
             return null;
         }
 
-        public static T FindValueInString<T>(string original, string startAt, string endAt)
+        public static T FindInString<T>(string original, string startAt, string endAt)
         {
             if (string.IsNullOrEmpty(original) || string.IsNullOrEmpty(startAt) || string.IsNullOrEmpty(endAt))
                 return default;
@@ -295,7 +344,6 @@ namespace Baddie.Commons
         /// <summary>
         /// Initialize the unity service
         /// </summary>
-        /// <returns></returns>
         public static Task Setup()
         {
             return UnityServices.State == ServicesInitializationState.Uninitialized ? UnityServices.InitializeAsync() : null;
@@ -304,7 +352,6 @@ namespace Baddie.Commons
         /// <summary>
         /// Sign into the unity service
         /// </summary>
-        /// <returns></returns>
         public static Task SignIn()
         {
             if (FirstTime)

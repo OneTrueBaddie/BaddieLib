@@ -44,8 +44,9 @@ namespace Baddie.Saving.Local
         /// <param name="data"></param>
         public static async void SaveAndEncrypt(string name, object data)
         {
-            var key = await RequestAPI.GetCloudValue<string>("GetEncryption", "Key");
-            var iv = await RequestAPI.GetCloudValue<byte[]>("GetEncryption", "IV");
+            var encryptionData = await RequestAPI.CallEndpoint("GetEncryption");
+            var key = await ConversionHelper.FromDictionaryAsync<string>(encryptionData, "Key");
+            var iv = await ConversionHelper.FromDictionaryAsync<byte[]>(encryptionData, "IV");
             var json = await Encrypt(JsonUtility.ToJson(data, true), key, iv);
 
             File.WriteAllText($"{SavePath}\\{name}.json", json);
@@ -222,9 +223,9 @@ namespace Baddie.Saving.Local
                     return (T)Convert.ChangeType(PlayerPrefs.GetFloat(name), typeof(T));
                 else if (type == typeof(string))
                     return (T)Convert.ChangeType(PlayerPrefs.GetString(name), typeof(T));
-                else 
+                else
                     Utils.Debugger.Log($"Cannot load a variable with type 'type.Name' from PlayerPrefs, Unity only supports types Int, Float and String", LogColour.Yellow, Utils.LogType.Warning);
-                
+
                 return default;
             }
             catch (Exception e)
@@ -279,44 +280,7 @@ namespace Baddie.Saving.Local
         public static int GetSaveCount() { return Directory.GetFiles(SavePath).Length; }
 
         static Task<string> Encrypt(string plainText, string key, byte[] iv)
-        {      
-            return Task.Run(() =>
-            {
-                using (var aes = Aes.Create())
-                {
-                    if (string.IsNullOrEmpty(key))
-                    {
-                        Utils.Debugger.Log("Could not encrypt text, key is null or empty", LogColour.Red, Utils.LogType.Error);
-                        return null;
-                    }
-                    if (iv == null)
-                    {
-                        Utils.Debugger.Log("Could not encrypt text, iv is null", LogColour.Red, Utils.LogType.Error);
-                        return null;
-                    }
-
-                    aes.Key = Encoding.UTF8.GetBytes(key.PadRight(32, ' '));
-                    aes.IV = iv;
-
-                    ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
-
-                    using var ms = new MemoryStream();
-                    using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
-                    using (var sw = new StreamWriter(cs))
-                    {
-                        sw.Write(plainText);
-                    }
-
-                    key = null;
-                    iv = null;
-
-                    return Convert.ToBase64String(ms.ToArray());
-                }
-            });
-        }
-
-        static Task<string> Decrypt(string cipherText, string key, byte[] iv)
-        {     
+        {
             return Task.Run(() =>
             {
                 using (var aes = Aes.Create())
@@ -332,7 +296,41 @@ namespace Baddie.Saving.Local
                         return null;
                     }
 
-                    aes.Key = Encoding.UTF8.GetBytes(key.PadRight(32, ' '));
+                    aes.Key = Encoding.UTF8.GetBytes(key);
+                    aes.IV = iv;
+
+                    ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+
+                    using var ms = new MemoryStream();
+                    using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                    using (var sw = new StreamWriter(cs))
+                    {
+                        sw.Write(plainText);
+                    }
+
+                    return Convert.ToBase64String(ms.ToArray());
+                }
+            });
+        }
+
+        static Task<string> Decrypt(string cipherText, string key, byte[] iv)
+        {
+            return Task.Run(() =>
+            {
+                using (var aes = Aes.Create())
+                {
+                    if (string.IsNullOrEmpty(key))
+                    {
+                        Utils.Debugger.Log("Could not decrypt text, key is null or empty", LogColour.Red, Utils.LogType.Error);
+                        return null;
+                    }
+                    if (iv == null)
+                    {
+                        Utils.Debugger.Log("Could not decrypt text, iv is null", LogColour.Red, Utils.LogType.Error);
+                        return null;
+                    }
+
+                    aes.Key = Encoding.UTF8.GetBytes(key);
                     aes.IV = iv;
 
                     ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
@@ -340,9 +338,6 @@ namespace Baddie.Saving.Local
                     using var ms = new MemoryStream(Convert.FromBase64String(cipherText));
                     using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
                     using var sr = new StreamReader(cs);
-
-                    key = null;
-                    iv = null;
 
                     return sr.ReadToEnd();
                 }
