@@ -20,7 +20,7 @@ namespace Baddie.Saving.Cloud
         {
             if (!Services.IsSetup())
                 Utils.Debugger.Log("Unity services is not setup, make sure it is setup otherwise CloudSaver will not work.", LogColour.Yellow, LogType.Warning);
-            if (!Services.IsSignedIn())
+            else if (!Services.IsSignedIn())
                 Utils.Debugger.Log("Current player is not signed into Unity Services, make sure they are signed in otherwise CloudSaver will not work.", LogColour.Yellow, LogType.Warning);
         }
 

@@ -16,7 +16,7 @@ namespace Baddie.Saving.Leaderboard
         {
             if (!Services.IsSetup())
                 Debugger.Log("Unity services is not setup, make sure it is setup otherwise LeaderboardSaver will not work.", LogColour.Yellow, LogType.Warning);
-            if (!Services.IsSignedIn())
+            else if (!Services.IsSignedIn())
                 Debugger.Log("Current player is not signed into Unity Services, make sure they are signed in otherwise LeaderboardSaver will not work.", LogColour.Yellow, LogType.Warning);
         }
 

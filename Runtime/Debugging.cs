@@ -55,7 +55,7 @@ namespace Baddie.Utils
 
             if (type == LogType.Normal)
                 Debug.Log(log);
-            else
+            else if (type == LogType.Warning)
                 Debug.LogWarning(log);
 
             #endif
@@ -76,7 +76,7 @@ namespace Baddie.Utils
 
             if (type == LogType.Normal)
                 Debug.Log(log);
-            else
+            else if (type == LogType.Warning)
                 Debug.LogWarning(log);
 
             #endif

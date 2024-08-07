@@ -2,7 +2,7 @@ namespace Baddie.Saving.Local
 {
     using Baddie.Utils;
     using Baddie.Commons;
-    using Baddie.Cloud.Requests;
+    using Baddie.Requests;
     using System;
     using System.IO;
     using System.Security.Cryptography;
@@ -18,6 +18,9 @@ namespace Baddie.Saving.Local
         public static string SavePath = $"{Path.GetPathRoot(Environment.SystemDirectory)}Users\\{Environment.UserName.ToLower()}\\Documents\\My Games\\{Application.companyName}\\{Application.productName}";
         public static bool Genuine = Application.genuine;
 
+        static string EncryptionKey = null;
+        static byte[] EncryptionIV = null;
+
         static LocalSaver()
         {
             if (!Directory.Exists(SavePath))
@@ -25,16 +28,50 @@ namespace Baddie.Saving.Local
         }
 
         /// <summary>
-        /// Save the given data to a file, if the file already exists then it will be overwritten
+        /// Gets the encryption key and iv once and stores it for all future use
+        /// </summary>
+        public static async void StoreEncryption()
+        {
+            EncryptionKey = await Requests.GetCloudValue<string>("GetEncryption", "Key");
+            EncryptionIV = await Requests.GetCloudValue<byte[]>("GetEncryption", "IV");
+        }
+
+        /// <summary>
+        /// Gets the encryption key and iv once and stores it for all future use
+        /// </summary>
+        public static async Task StoreEncryption(bool task)
+        {
+            EncryptionKey = await Requests.GetCloudValue<string>("GetEncryption", "Key");
+            EncryptionIV = await Requests.GetCloudValue<byte[]>("GetEncryption", "IV");
+        }
+
+        /// <summary>
+        /// Save the given data to a file as plain-text, if the file already exists then it will be overwritten
         /// </summary>
         /// <param name="name"></param>
         /// <param name="data"></param>
-        public static void Save(string name, object data)
+        public static void SaveRaw(string name, object data)
         {
             var path = $"{SavePath}\\{name}.json";
             var json = JsonUtility.ToJson(data);
 
             File.WriteAllText(path, json);
+        }
+
+        /// <summary>
+        /// Save the given data to a file as plain-text, if the file already exists then it will be overwritten
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="data"></param>
+        public static Task SaveRaw(string name, object data, bool task)
+        {
+            return Task.Run(() =>
+            {
+                var path = $"{SavePath}\\{name}.json";
+                var json = JsonUtility.ToJson(data);
+
+                File.WriteAllText(path, json);
+            });
         }
 
         /// <summary>
@@ -44,9 +81,22 @@ namespace Baddie.Saving.Local
         /// <param name="data"></param>
         public static async void SaveAndEncrypt(string name, object data)
         {
-            var encryptionData = await RequestAPI.CallEndpoint("GetEncryption");
-            var key = await ConversionHelper.FromDictionaryAsync<string>(encryptionData, "Key");
-            var iv = await ConversionHelper.FromDictionaryAsync<byte[]>(encryptionData, "IV");
+            var key = EncryptionKey ?? await Requests.GetCloudValue<string>("GetEncryption", "Key");
+            var iv = EncryptionIV ?? await Requests.GetCloudValue<byte[]>("GetEncryption", "IV");
+            var json = await Encrypt(JsonUtility.ToJson(data, true), key, iv);
+
+            File.WriteAllText($"{SavePath}\\{name}.json", json);
+        }
+
+        /// <summary>
+        /// Save and encrypt the given data to a file, if the file already exists then it will be overwritten
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="data"></param>
+        public static async Task SaveAndEncrypt(string name, object data, bool task)
+        {
+            var key = EncryptionKey ?? await Requests.GetCloudValue<string>("GetEncryption", "Key");
+            var iv = EncryptionIV ?? await Requests.GetCloudValue<byte[]>("GetEncryption", "IV");
             var json = await Encrypt(JsonUtility.ToJson(data, true), key, iv);
 
             File.WriteAllText($"{SavePath}\\{name}.json", json);
@@ -114,59 +164,34 @@ namespace Baddie.Saving.Local
         /// <param name="name"></param>
         /// <param name="data"></param>
         /// <returns>(bool, T) weither or not the task succeeded and the value of the loaded save</returns>
-        public static Task<(bool, T)> TryLoadSave<T>(string name)
-        {
-            return Task.Run(() =>
-            {
-                string path = SavePath + $"{name}.json";
-                T data = default;
-
-                if (!File.Exists(path))
-                    return (false, data);
-
-                try
-                {
-                    string json = File.ReadAllText(path);
-                    data = JsonUtility.FromJson<T>(json);
-                }
-                catch (Exception e)
-                {
-                    Utils.Debugger.Log($"Error trying to load save '{name}', exception: {e}", LogColour.Red, Utils.LogType.Error);
-                    return (false, data);
-                }
-
-                return (true, data);
-            });
-        }
-
-        /// <summary>
-        /// Try to load and decrypt a save with its filename
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="data"></param>
-        /// <returns>(bool, T) weither or not the task succeeded and the value of the loaded save</returns>
-        public static Task<(bool, T)> TryLoadSave<T>(string name, string key, byte[] iv)
+        public static Task<(bool, T)> TryLoadSave<T>(string name, bool encrypted = false)
         {
             return Task.Run(async () =>
             {
-                string path = SavePath + $"{name}.json";
-                T data = default;
+                var path = $"{SavePath}\\{name}.json";
 
                 if (!File.Exists(path))
-                    return (false, data);
+                    return (false, default(T));
 
                 try
                 {
-                    string json = await Decrypt(File.ReadAllText(path), key, iv);
-                    data = JsonUtility.FromJson<T>(json);
+                    var json = File.ReadAllText(path);
+
+                    if (encrypted)
+                    {
+                        var key = EncryptionKey ?? await Requests.GetCloudValue<string>("GetEncryption", "Key");
+                        var iv = EncryptionIV ?? await Requests.GetCloudValue<byte[]>("GetEncryption", "IV");
+
+                        json = await Decrypt(json, key, iv);
+                    }
+
+                    return (true, JsonUtility.FromJson<T>(json));
                 }
                 catch (Exception e)
                 {
                     Utils.Debugger.Log($"Error trying to load save '{name}', exception: {e}", LogColour.Red, Utils.LogType.Error);
-                    return (false, data);
+                    return (false, default(T));
                 }
-
-                return (true, data);
             });
         }
 
@@ -178,7 +203,7 @@ namespace Baddie.Saving.Local
         /// <param name="type"></param>
         public static void SavePlayerPref(string name, object value)
         {
-            Type type = value.GetType();
+            var type = value.GetType();
 
             try
             {
@@ -207,7 +232,7 @@ namespace Baddie.Saving.Local
         /// <returns>(T) The value of the given key if found, otherwise returns the default value of T</returns>
         public static T LoadPlayerPref<T>(string name)
         {
-            Type type = typeof(T);
+            var type = typeof(T);
 
             try
             {
@@ -245,7 +270,7 @@ namespace Baddie.Saving.Local
         public static bool LoadPlayerPref<T>(string name, out T data)
         {
             data = default;
-            Type type = data.GetType();
+            var type = data.GetType();
 
             if (!PlayerPrefs.HasKey(name))
             {

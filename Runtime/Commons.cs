@@ -144,6 +144,13 @@ namespace Baddie.Commons
 
     public static class ConversionHelper
     {
+        /// <summary>
+        /// Find and convert the given keys value from an object dictionary
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="d"></param>
+        /// <param name="key"></param>
+        /// <returns>(T) The converted value of the key if found, default if not</returns>
         public static T FromDictionary<T>(Dictionary<string, object> d, string key) 
         { 
             if (d == null || d.Count == 0)
@@ -163,36 +170,43 @@ namespace Baddie.Commons
             }
         }
 
-        public static async Task<T> FromDictionaryAsync<T>(Dictionary<string, object> d, string key)
+        /// <summary>
+        /// Convert the given string to T
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="str"></param>
+        /// <returns>(T) Converted value if successful, default if not</returns>
+        public static T FromString<T>(string str)
         {
-            if (d == null || d.Count == 0)
+            if (string.IsNullOrEmpty(str))
             {
-                Debugger.Log("Cannot get value from dictionary as it is null or empty", LogColour.Yellow, Utils.LogType.Warning);
+                Debugger.Log("Cannot convert from string, string is null or empty");
                 return default;
             }
 
+            // Some edge cases that cant just be converted from ChangeType
+            // Will have to expand this as I run into errors as idk what types would need to be added here
+            if (typeof(T) == typeof(byte[]))
+                return (T)(object)Convert.FromBase64String(str);
+
             try
             {
-                return await Task.Run(() =>
-                {
-                    if (d.TryGetValue(key, out var obj))
-                    {
-                        if (typeof(T) == typeof(byte[]) && obj is string str)
-                            return (T)(object)Convert.FromBase64String(str);
-
-                        return (T)Convert.ChangeType(obj, typeof(T));
-                    }
-
-                    return default;
-                });
+                return (T)Convert.ChangeType(str, typeof(T));
             }
             catch (Exception e)
             {
-                Debugger.Log($"Error trying to get value from dictionary with key '{key}', exception: {e}", LogColour.Red, Utils.LogType.Error);
+                Debugger.Log($"Could not convert from string '{str}', exception: {e}", LogColour.Red, Utils.LogType.Error);
                 return default;
             }
         }
 
+        /// <summary>
+        /// Find the given value between 2 points in a string
+        /// </summary>
+        /// <param name="original"></param>
+        /// <param name="startAt"></param>
+        /// <param name="endAt"></param>
+        /// <returns>(string) The value if found, null if not</returns>
         public static string FindInString(string original, string startAt, string endAt)
         {
             if (original.Contains(startAt) && original.Contains(endAt))
@@ -206,6 +220,14 @@ namespace Baddie.Commons
             return null;
         }
 
+        /// <summary>
+        /// Find the given value between 2 points in a string
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="original"></param>
+        /// <param name="startAt"></param>
+        /// <param name="endAt"></param>
+        /// <returns>(T) The found value converted to T if found, default if not</returns>
         public static T FindInString<T>(string original, string startAt, string endAt)
         {
             if (string.IsNullOrEmpty(original) || string.IsNullOrEmpty(startAt) || string.IsNullOrEmpty(endAt))
@@ -390,7 +412,6 @@ namespace Baddie.Commons
         /// Invoke a job once unity services is initialized, if it already is then the job will instantly invoke
         /// </summary>
         /// <param name="job"></param>
-        /// <returns></returns>
         public static IEnumerator WaitUntilInitialized(Action job)
         {
             yield return new WaitUntil(IsSetup);
@@ -402,7 +423,6 @@ namespace Baddie.Commons
         /// Invoke a job once the user is signed in, if they already are then the job will instantly invoke
         /// </summary>
         /// <param name="job"></param>
-        /// <returns></returns>
         public static IEnumerator WaitUntilSignedIn(Action job)
         {
             yield return new WaitUntil(IsSignedIn);
@@ -413,7 +433,7 @@ namespace Baddie.Commons
         /// <summary>
         /// Check if the unity service is initialized
         /// </summary>
-        /// <returns>(bool) true if it is, false if not</returns>
+        /// <returns>(bool) True if it is, false if not</returns>
         public static bool IsSetup() { return UnityServices.State == ServicesInitializationState.Initialized; }
 
         /// <summary>
