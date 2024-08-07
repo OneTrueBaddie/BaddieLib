@@ -393,7 +393,7 @@ namespace Baddie.Commons
         /// </summary>
         public static void SignOut()
         {
-            if (IsSignedIn()))
+            if (IsSignedIn())
                 AuthenticationService.Instance.SignOut();
         }
 
