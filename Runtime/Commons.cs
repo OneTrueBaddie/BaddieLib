@@ -391,12 +391,10 @@ namespace Baddie.Commons
         /// <summary>
         /// Sign out of the unity service
         /// </summary>
-        public static async void SignOut()
+        public static void SignOut()
         {
-            if (!IsSetup())
-                await Setup();
-
-            AuthenticationService.Instance.SignOut();
+            if (IsSignedIn()))
+                AuthenticationService.Instance.SignOut();
         }
 
         /// <summary>
