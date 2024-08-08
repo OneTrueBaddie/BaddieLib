@@ -10,8 +10,30 @@ namespace Baddie.Saving.Local
     using System.Threading.Tasks;
     using UnityEngine;
     using System.Diagnostics;
+    using Newtonsoft.Json;
     using System.Collections.Generic;
-    using System.Reflection;
+
+    [AttributeUsage(AttributeTargets.All)]
+    public class LocalSaveAttribute : Attribute
+    {
+        public LocalSaveAttribute() { }
+    }
+
+    public class LocalSaveData
+    {
+        public Type Type;
+        public string Name;
+        public string ID;
+        public string Json;
+
+        public LocalSaveData(Type type, string name, string id, string json) 
+        { 
+            Type = type;
+            Name = name;
+            ID = id;
+            Json = json;
+        }
+    }
 
     public class LocalSaver
     {
@@ -46,7 +68,9 @@ namespace Baddie.Saving.Local
         }
 
         /// <summary>
-        /// Save the given data to a file as plain-text, if the file already exists then it will be overwritten
+        /// Save the given data to a file as plain-text, if the file already exists then it will be overwritten.
+        /// This has the limit of only being able to handle 1 script per file.
+        /// Use 'SaveAuto' to allow saving multiple different scripts/instances
         /// </summary>
         /// <param name="name"></param>
         /// <param name="data"></param>
@@ -60,6 +84,8 @@ namespace Baddie.Saving.Local
 
         /// <summary>
         /// Save the given data to a file as plain-text, if the file already exists then it will be overwritten
+        /// This has the limit of only being able to handle 1 script per file.
+        /// Use 'SaveAuto' to allow saving multiple different scripts/instances
         /// </summary>
         /// <param name="name"></param>
         /// <param name="data"></param>
@@ -76,6 +102,8 @@ namespace Baddie.Saving.Local
 
         /// <summary>
         /// Save and encrypt the given data to a file, if the file already exists then it will be overwritten
+        /// This has the limit of only being able to handle 1 script per file.
+        /// Use 'SaveAuto' to allow saving multiple different scripts/instances
         /// </summary>
         /// <param name="name"></param>
         /// <param name="data"></param>
@@ -107,10 +135,53 @@ namespace Baddie.Saving.Local
         /// Some data may not be parsable, such as structs or lists/arrays that dont contain simple variables.
         /// (I may have to add custom parsing to support more advanced variables)
         /// </summary>
-        public static Task SaveAuto()
+        public static void SaveAuto(string name)
         {
-            // Collect instances on the main thread
-            object[] scripts = Reflection.GetInstances(typeof(LocalSaveAttribute));
+            var scripts = Reflection.GetInstances(typeof(LocalSaveAttribute));
+            List<object> objects = new();
+
+            if (scripts == null || scripts.Length == 0)
+            {
+                Utils.Debugger.Log("Cannot local save, 'scripts' is null or empty", LogColour.Yellow, Utils.LogType.Warning);
+                return;
+            }
+
+            Stopwatch sw = Stopwatch.StartNew();
+
+            if (!File.Exists($"{SavePath}\\{name}.json"))
+                File.Create($"{SavePath}\\{name}.json");
+
+            foreach (var script in scripts)
+            {
+                objects.Add(script);
+                Utils.Debugger.Log(script.GetType().Name);
+            }
+
+            var json = JsonConvert.SerializeObject(objects, Formatting.Indented, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                NullValueHandling = NullValueHandling.Ignore,
+            });
+
+            File.WriteAllText($"{SavePath}\\{name}.json", json);
+
+            sw.Stop();
+            Utils.Debugger.Log($"Automatically saved data to local ({sw.Elapsed.TotalMilliseconds}ms)", LogColour.Green);
+        }
+
+        /// <summary>
+        /// Automatically saves all values that have the LocalSave attribute.
+        /// Some data may not be parsable, such as structs or lists/arrays that dont contain simple variables.
+        /// (I may have to add custom parsing to support more advanced variables)
+        /// </summary>
+        public static Task SaveAuto(string name, bool task)
+        {
+            var scripts = Reflection.GetInstances(typeof(LocalSaveAttribute));
+            List<object> objects = new();
+
+            if (!File.Exists($"{SavePath}\\{name}.json"))
+                File.Create($"{SavePath}\\{name}.json");
 
             return Task.Run(() =>
             {
@@ -123,35 +194,15 @@ namespace Baddie.Saving.Local
                 Stopwatch sw = Stopwatch.StartNew();
 
                 foreach (var script in scripts)
+                    objects.Add(script);
+
+                var json = JsonConvert.SerializeObject(objects, Formatting.Indented, new JsonSerializerSettings
                 {
-                    Type type = script.GetType();
-                    IEnumerable<FieldInfo> fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    TypeNameHandling = TypeNameHandling.All,
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                });
 
-                    foreach (var field in fields)
-                    {
-                        if (!Attribute.IsDefined(field, typeof(LocalSaveAttribute)))
-                            continue;
-
-                        try
-                        {
-                            object fieldValue = field.GetValue(script);
-
-                            if (fieldValue != null)
-                            {
-                                string json = JsonUtility.ToJson(fieldValue, true);
-                                Utils.Debugger.Log(json);
-                            }
-                            else
-                            {
-                                Utils.Debugger.Log($"Field '{field.Name}' in instance '{type.Name}' is null and was skipped.", LogColour.Yellow, Utils.LogType.Warning);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            Utils.Debugger.Log($"Error trying to save variable '{field.Name}' from instance '{type.Name}', exception: {e}", LogColour.Red, Utils.LogType.Error);
-                        }
-                    }
-                }
+                File.WriteAllText($"{SavePath}\\{name}.json", json);
 
                 sw.Stop();
                 Utils.Debugger.Log($"Automatically saved data to local ({sw.Elapsed.TotalMilliseconds}ms)", LogColour.Green);

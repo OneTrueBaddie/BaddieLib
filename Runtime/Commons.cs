@@ -11,25 +11,14 @@ namespace Baddie.Commons
     using Unity.Services.Core;
     using System.Collections;
     using Unity.Services.Authentication;
+    using Newtonsoft.Json;
 
 #if PHOTON_UNITY_NETWORKING
     using Photon.Pun;
     using Photon.Realtime;
 #endif
 
-
-    [AttributeUsage(AttributeTargets.All)]
-    public class LocalSaveAttribute : Attribute
-    {
-        public LocalSaveAttribute() { }
-    }
-
-    [AttributeUsage(AttributeTargets.All)]
-    public class CloudSaveAttribute : Attribute
-    {
-        public CloudSaveAttribute() { }
-    }
-
+    [Obsolete("The threading implementation is quite poor, I wouldnt recommend it")]
     public static class Threading
     {
         public struct ThreadedJob
@@ -104,7 +93,7 @@ namespace Baddie.Commons
             if (thread.Worker.ThreadState == ThreadState.Running)
                 thread.Worker.Abort();
 
-            ThreadStart job = () =>
+            void job()
             {
                 work.Invoke();
 
@@ -117,7 +106,7 @@ namespace Baddie.Commons
                 };
 
                 thread.Worker.Start();
-            };
+            }
 
             thread.Worker = new(job)
             {
@@ -161,7 +150,15 @@ namespace Baddie.Commons
 
             try
             {
-                return d.TryGetValue(key, out var obj) ? (T)Convert.ChangeType(obj, typeof(T)) : default;
+                if (d.TryGetValue(key, out var value))
+                {
+                    if (value is string str)
+                        return FromString<T>(str);
+
+                    return (T)Convert.ChangeType(value, typeof(T));
+                }
+
+                return default;
             }
             catch (Exception e)
             {
@@ -211,8 +208,8 @@ namespace Baddie.Commons
         {
             if (original.Contains(startAt) && original.Contains(endAt))
             {
-                int start = original.IndexOf(startAt, 0, StringComparison.Ordinal) + startAt.Length;
-                int end = original.IndexOf(endAt, start, StringComparison.Ordinal);
+                var start = original.IndexOf(startAt, 0, StringComparison.Ordinal) + startAt.Length;
+                var end = original.IndexOf(endAt, start, StringComparison.Ordinal);
 
                 return start < 0 || end < 0 ? null : original.Substring(start, end - start);
             }
@@ -230,24 +227,24 @@ namespace Baddie.Commons
         /// <returns>(T) The found value converted to T if found, default if not</returns>
         public static T FindInString<T>(string original, string startAt, string endAt)
         {
-            if (string.IsNullOrEmpty(original) || string.IsNullOrEmpty(startAt) || string.IsNullOrEmpty(endAt))
-                return default;
-            if (!original.Contains(startAt) || !original.Contains(endAt))
-                return default;
-
-            int start = original.IndexOf(startAt, 0, StringComparison.Ordinal) + startAt.Length;
-            int end = original.IndexOf(endAt, start, StringComparison.Ordinal);
-            string result = original.Substring(start, end - start);
-
-            try
+            if (original.Contains(startAt) && original.Contains(endAt))
             {
-                return (T)Convert.ChangeType(result, typeof(T));
+                var start = original.IndexOf(startAt, 0, StringComparison.Ordinal) + startAt.Length;
+                var end = original.IndexOf(endAt, start, StringComparison.Ordinal);
+                var result = original.Substring(start, end - start);
+
+                try
+                {
+                    return FromString<T>(result);
+                }
+                catch
+                {
+                    Debugger.Log($"Could not convert string to type '{typeof(T).Name}'");
+                    return default;
+                }
             }
-            catch
-            {
-                Debugger.Log($"Could not convert string to type '{typeof(T).Name}'");
-                return default;
-            }
+
+            return default;
         }
     }
 
@@ -337,6 +334,81 @@ namespace Baddie.Commons
         }
     }
 
+    public static class UniqueIdentifer
+    {
+        public static GameObject Instaniate(string name, bool active = true)
+        {
+            var id = Guid.NewGuid();
+            var obj = new GameObject($"{name} #{id}");
+
+            obj.SetActive(active);
+
+            return obj;
+        }
+
+        public static GameObject Instaniate(string name, Transform parent, bool active = true)
+        {
+            var id = Guid.NewGuid();
+            var obj = new GameObject($"{name} #{id}");
+
+            obj.transform.SetParent(parent);
+            obj.SetActive(active);
+
+            return obj;
+        }
+
+        public static GameObject Instaniate(string name, Transform parent, Vector3 pos, bool active = true)
+        {
+            var id = Guid.NewGuid();
+            var obj = new GameObject($"{name} #{id}");
+
+            obj.transform.SetParent(parent);
+            obj.transform.position = pos;
+            obj.SetActive(active);
+
+            return obj;
+        }
+
+        public static GameObject Instaniate(string name, Transform parent, Vector2 pos, bool active = true)
+        {
+            var id = Guid.NewGuid();
+            var obj = new GameObject($"{name} #{id}");
+
+            obj.transform.SetParent(parent);
+            obj.transform.position = pos;
+            obj.SetActive(active);
+
+            return obj;
+        }
+
+        public static GameObject Instaniate(string name, Transform parent, Vector3 pos, bool worldSpace, bool active = true)
+        {
+            var id = Guid.NewGuid();
+            var obj = new GameObject($"{name} #{id}");
+
+            obj.transform.SetParent(parent, worldSpace);
+            obj.transform.position = pos;
+            obj.SetActive(active);
+
+            return obj;
+        }
+
+        public static GameObject Instaniate(string name, Transform parent, Vector2 pos, bool worldSpace, bool active = true)
+        {
+            var id = Guid.NewGuid();
+            var obj = new GameObject($"{name} #{id}");
+
+            obj.transform.SetParent(parent, worldSpace);
+            obj.transform.position = pos;
+            obj.SetActive(active);
+
+            return obj;
+        }
+
+        public static string GetID(GameObject obj) { return obj.name.Split('#')[1]; }
+        public static string GetID(string name) { return name.Split('#')[1]; }
+    }
+
     public static class Services
     {
         public static string UUID;
@@ -393,7 +465,7 @@ namespace Baddie.Commons
         /// </summary>
         public static void SignOut()
         {
-            if (IsSignedIn()))
+            if (IsSignedIn())
                 AuthenticationService.Instance.SignOut();
         }
 
@@ -404,6 +476,15 @@ namespace Baddie.Commons
         public static void SignOut(bool clearCredentials)
         {
             AuthenticationService.Instance.SignOut(clearCredentials);
+        }
+
+        /// <summary>
+        /// Change the current players name on Unity Services
+        /// </summary>
+        /// <param name="name"></param>
+        public static async void ChangePlayerName(string name)
+        {
+            await AuthenticationService.Instance.UpdatePlayerNameAsync(name);
         }
 
         /// <summary>
@@ -439,15 +520,6 @@ namespace Baddie.Commons
         /// </summary>
         /// <returns>(bool) true if they are, false if not</returns>
         public static bool IsSignedIn() { return UnityServices.State == ServicesInitializationState.Initialized && AuthenticationService.Instance.IsSignedIn; }
-
-        /// <summary>
-        /// Change the current players name on Unity Services
-        /// </summary>
-        /// <param name="name"></param>
-        public static async void ChangePlayerName(string name)
-        {
-            await AuthenticationService.Instance.UpdatePlayerNameAsync(name);
-        }
 
         static void ResetEvents()
         {

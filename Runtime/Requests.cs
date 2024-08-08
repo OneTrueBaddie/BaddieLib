@@ -21,7 +21,7 @@ namespace Baddie.Requests
             if (!Services.IsSetup())
                 Debugger.Log("Unity services is not setup, make sure it is setup otherwise RequestAPI will not work.", LogColour.Yellow, Utils.LogType.Warning);
             else if (!Services.IsSignedIn())
-                Debugger.Log("Current player is not signed into Unity Services, make sure they are signed in otherwise RequestAPI will not work.", LogColour.Yellow, Utils.LogType.Warning);
+                Debugger.Log("Current player is not signed into Unity Services, make sure they are signed in otherwise RequestAPI will not work fully.", LogColour.Yellow, Utils.LogType.Warning);
         }
 
         public static Task<Dictionary<string, object>> CallEndpoint(string methodName, Dictionary<string, object> args = null)
@@ -31,31 +31,34 @@ namespace Baddie.Requests
 
         public static async Task<T> GetCloudValue<T>(string methodName, string key, Dictionary<string, object> args = null)
         {
-            var dictionary = await CallEndpoint(methodName, args);
-
-            if (dictionary == null || dictionary.Count == 0)
+            return await Task.Run(async() =>
             {
-                Debugger.Log("Could not get cloud value, dictionary is null or empty", LogColour.Yellow, Utils.LogType.Warning);
-                return default;
-            }
+                var dictionary = await CallEndpoint(methodName, args);
 
-            try
-            {
-                if (dictionary.TryGetValue(key, out var data)) 
+                if (dictionary == null || dictionary.Count == 0)
                 {
-                    if (data is string str)
-                        return ConversionHelper.FromString<T>(str);
-
-                    return (T)Convert.ChangeType(data, typeof(T));
+                    Debugger.Log("Could not get cloud value, dictionary is null or empty", LogColour.Yellow, Utils.LogType.Warning);
+                    return default;
                 }
 
-                return default;
-            }
-            catch (Exception e)
-            {
-                Debugger.Log($"Error trying to get cloud value from key '{key}', exception: {e}", LogColour.Yellow, Utils.LogType.Warning);
-                return default;
-            }
+                try
+                {
+                    if (dictionary.TryGetValue(key, out var data))
+                    {
+                        if (data is string str)
+                            return ConversionHelper.FromString<T>(str);
+
+                        return (T)Convert.ChangeType(data, typeof(T));
+                    }
+
+                    return default;
+                }
+                catch (Exception e)
+                {
+                    Debugger.Log($"Error trying to get cloud value from key '{key}', exception: {e}", LogColour.Red, Utils.LogType.Error);
+                    return default;
+                }
+            });
         }
 
         public static IEnumerator SendWebRequest(string url, Action<string> callback, string method = "POST", params object[] args)
@@ -85,6 +88,22 @@ namespace Baddie.Requests
                 {
                     Debugger.Log($"Error trying to send web request to '{url}' with method '{method}', response: {webRequest.error}", LogColour.Red, Utils.LogType.Error);
                 }
+            }
+        }
+
+        public static IEnumerator IsWifiReachable(Action<bool> callback)
+        {
+            if (Application.internetReachability == NetworkReachability.NotReachable)
+            {
+                callback(false);
+                yield break;
+            }
+
+            using (UnityWebRequest webRequest = UnityWebRequest.Get("https://google.com"))
+            {
+                yield return webRequest.SendWebRequest();
+
+                callback(webRequest.result == UnityWebRequest.Result.Success);
             }
         }
     }

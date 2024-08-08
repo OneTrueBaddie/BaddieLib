@@ -11,6 +11,12 @@ namespace Baddie.Saving.Cloud
     using System.Threading.Tasks;
     using System.Diagnostics;
 
+    [AttributeUsage(AttributeTargets.All)]
+    public class CloudSaveAttribute : Attribute
+    {
+        public CloudSaveAttribute() { }
+    }
+
     public static class CloudSaver
     {
         public static volatile Dictionary<string, Item> LoadedData = new();
@@ -21,7 +27,7 @@ namespace Baddie.Saving.Cloud
             if (!Services.IsSetup())
                 Utils.Debugger.Log("Unity services is not setup, make sure it is setup otherwise CloudSaver will not work.", LogColour.Yellow, LogType.Warning);
             else if (!Services.IsSignedIn())
-                Utils.Debugger.Log("Current player is not signed into Unity Services, make sure they are signed in otherwise CloudSaver will not work.", LogColour.Yellow, LogType.Warning);
+                Utils.Debugger.Log("Current player is not signed into Unity Services, make sure they are signed in otherwise CloudSaver will not work fully.", LogColour.Yellow, LogType.Warning);
         }
 
         public static async void Save()
