@@ -11,12 +11,60 @@ namespace Baddie.Commons
     using Unity.Services.Core;
     using System.Collections;
     using Unity.Services.Authentication;
-    using Newtonsoft.Json;
 
 #if PHOTON_UNITY_NETWORKING
     using Photon.Pun;
     using Photon.Realtime;
 #endif
+
+    public class Identifier : MonoBehaviour
+    {
+        [Info] public string Name;
+        [Info] public string ID;
+        [Info] public string ParentID;
+        [Info] public bool Active;
+        [Info] public Vector3 Position;
+        [Info] public Quaternion Rotation;
+        public List<Type> Components;
+
+        // Store data when the game is quit
+        // Usually youd want some sort of auto saving every so often
+        void OnApplicationQuit()
+        {
+            GetData();
+        }
+
+        public void Create()
+        {
+            ID = Guid.NewGuid().ToString();
+            Components = new();
+            GetData();
+        }
+
+        void GetData()
+        {
+            Name = gameObject.name;
+
+            if (transform.parent != null)
+                ParentID = UniqueObject.GetID(transform.parent.gameObject);
+
+            Active = gameObject.activeSelf;
+            Position = gameObject.transform.position;
+            Rotation = gameObject.transform.rotation;
+
+            var components = gameObject.GetComponents<Component>();
+
+            Components.Clear();
+
+            foreach (var component in components)
+            {
+                if (component == null)
+                    continue;
+
+                Components.Add(component.GetType());
+            }
+        }
+    }
 
     [Obsolete("The threading implementation is quite poor, I wouldnt recommend it")]
     public static class Threading
@@ -334,79 +382,184 @@ namespace Baddie.Commons
         }
     }
 
-    public static class UniqueIdentifier
+    public static class UniqueObject
     {
+        /// <summary>
+        /// Create and spawn a new GameObject with a unqiue identifier.
+        /// This is required for saving automatically
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="active"></param>
+        /// <returns>(GameObject) The created GameObject</returns>
         public static GameObject Instaniate(string name, bool active = true)
         {
-            var id = Guid.NewGuid();
-            var obj = new GameObject($"{name} #{id}");
+            var obj = new GameObject(name);
 
             obj.SetActive(active);
+
+            obj.AddComponent<Identifier>().Create();
 
             return obj;
         }
 
+        /// <summary>
+        /// Create and spawn a new GameObject with a unqiue identifier.
+        /// This is required for saving automatically
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="active"></param>
+        /// <returns>(GameObject) The created GameObject</returns>
         public static GameObject Instaniate(string name, Transform parent, bool active = true)
         {
-            var id = Guid.NewGuid();
-            var obj = new GameObject($"{name} #{id}");
+            var obj = new GameObject(name);
 
             obj.transform.SetParent(parent);
             obj.SetActive(active);
 
+            obj.AddComponent<Identifier>().Create();
+
             return obj;
         }
 
+        /// <summary>
+        /// Create and spawn a new GameObject with a unqiue identifier.
+        /// This is required for saving automatically
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="active"></param>
+        /// <returns>(GameObject) The created GameObject</returns>
         public static GameObject Instaniate(string name, Transform parent, Vector3 pos, bool active = true)
         {
-            var id = Guid.NewGuid();
-            var obj = new GameObject($"{name} #{id}");
+            var obj = new GameObject(name);
 
             obj.transform.SetParent(parent);
             obj.transform.position = pos;
             obj.SetActive(active);
 
+            obj.AddComponent<Identifier>().Create();
+
             return obj;
         }
 
+        /// <summary>
+        /// Create and spawn a new GameObject with a unqiue identifier.
+        /// This is required for saving automatically
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="active"></param>
+        /// <returns>(GameObject) The created GameObject</returns>
         public static GameObject Instaniate(string name, Transform parent, Vector2 pos, bool active = true)
         {
-            var id = Guid.NewGuid();
-            var obj = new GameObject($"{name} #{id}");
+            var obj = new GameObject(name);
 
             obj.transform.SetParent(parent);
             obj.transform.position = pos;
             obj.SetActive(active);
 
+            obj.AddComponent<Identifier>().Create();
+
             return obj;
         }
 
-        public static GameObject Instaniate(string name, Transform parent, Vector3 pos, bool worldSpace, bool active = true)
+        /// <summary>
+        /// Create and spawn a new GameObject with a unqiue identifier.
+        /// This is required for saving automatically
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="active"></param>
+        /// <returns>(GameObject) The created GameObject</returns>
+        public static GameObject Instaniate(string name, Transform parent, Vector3 pos, Quaternion rot, bool active = true)
         {
-            var id = Guid.NewGuid();
-            var obj = new GameObject($"{name} #{id}");
+            var obj = new GameObject(name);
+
+            obj.transform.SetParent(parent);
+            obj.transform.position = pos;
+            obj.transform.rotation = rot;
+            obj.SetActive(active);
+
+            obj.AddComponent<Identifier>().Create();
+
+            return obj;
+        }
+
+        /// <summary>
+        /// Create and spawn a new GameObject with a unqiue identifier.
+        /// This is required for saving automatically
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="active"></param>
+        /// <returns>(GameObject) The created GameObject</returns>
+        public static GameObject Instaniate(string name, Transform parent, Vector2 pos, Quaternion rot, bool active = true)
+        {
+            var obj = new GameObject(name);
+
+            obj.transform.SetParent(parent);
+            obj.transform.position = pos;
+            obj.transform.rotation = rot;
+            obj.SetActive(active);
+
+            obj.AddComponent<Identifier>().Create();
+
+            return obj;
+        }
+
+        /// <summary>
+        /// Create and spawn a new GameObject with a unqiue identifier.
+        /// This is required for saving automatically
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="active"></param>
+        /// <returns>(GameObject) The created GameObject</returns>
+        public static GameObject Instaniate(string name, Transform parent, Vector3 pos, Quaternion rot, bool worldSpace, bool active = true)
+        {
+            var obj = new GameObject(name);
 
             obj.transform.SetParent(parent, worldSpace);
             obj.transform.position = pos;
+            obj.transform.rotation = rot;
             obj.SetActive(active);
+
+            obj.AddComponent<Identifier>().Create();
 
             return obj;
         }
 
-        public static GameObject Instaniate(string name, Transform parent, Vector2 pos, bool worldSpace, bool active = true)
+        /// <summary>
+        /// Create and spawn a new GameObject with a unqiue identifier.
+        /// This is required for saving automatically
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="active"></param>
+        /// <returns>(GameObject) The created GameObject</returns>
+        public static GameObject Instaniate(string name, Transform parent, Vector2 pos, Quaternion rot, bool worldSpace, bool active = true)
         {
-            var id = Guid.NewGuid();
-            var obj = new GameObject($"{name} #{id}");
+            var obj = new GameObject(name);
 
             obj.transform.SetParent(parent, worldSpace);
             obj.transform.position = pos;
+            obj.transform.rotation = rot;
             obj.SetActive(active);
+
+            obj.AddComponent<Identifier>().Create();
 
             return obj;
         }
 
-        public static string GetID(GameObject obj) { return obj.name.Split('#')[1]; }
-        public static string GetID(string name) { return name.Split('#')[1]; }
+        /// <summary>
+        /// Get the unique id of the given GameObject
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns>(string) The id of the GameObject if available, null if not</returns>
+        public static string GetID(GameObject obj) 
+        {
+            if (obj == null)
+                return null;
+
+            if (obj.TryGetComponent<Identifier>(out var indentifier))
+                return indentifier.ID;
+
+            return null;
+        }
     }
 
     public static class Services
@@ -418,11 +571,11 @@ namespace Baddie.Commons
         {
             UUID = AuthenticationService.Instance.PlayerId;
 
-            Debugger.Log($"Signed into Unity Services ({UUID})");
+            Debugger.Log($"Signed into Unity Services ({UUID})", LogColour.Green);
         };
         public static event Action OnSignOut = () =>
         {
-            Debugger.Log($"Signed out from Unity Services ({UUID})");
+            Debugger.Log($"Signed out from Unity Services ({UUID})", LogColour.Yellow);
 
             ResetEvents();
 
@@ -451,16 +604,24 @@ namespace Baddie.Commons
         /// </summary>
         public static Task SignIn()
         {
-            if (FirstTime)
+            if (IsSetup())
             {
-                AuthenticationService.Instance.SignedIn += OnSignIn;
-                AuthenticationService.Instance.SignedOut += OnSignOut;
-                AuthenticationService.Instance.SignInFailed += OnSignInFail;
+                if (FirstTime)
+                {
+                    AuthenticationService.Instance.SignedIn += OnSignIn;
+                    AuthenticationService.Instance.SignedOut += OnSignOut;
+                    AuthenticationService.Instance.SignInFailed += OnSignInFail;
 
-                FirstTime = false;
+                    FirstTime = false;
+                }
+
+                return AuthenticationService.Instance.SignInAnonymouslyAsync();
             }
-
-            return AuthenticationService.Instance.SignInAnonymouslyAsync();
+            else
+            {
+                Debugger.Log("Cannot sign in, Unity Services is not setup. Make sure to call 'Services.Setup' before trying to sign in.", LogColour.Red, Utils.LogType.Error);
+                return null;
+            }
         }
 
         /// <summary>
