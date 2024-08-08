@@ -422,11 +422,11 @@ namespace Baddie.Commons
         };
         public static event Action OnSignOut = () =>
         {
-            UUID = null;
+            Debugger.Log($"Signed out from Unity Services ({UUID})");
 
             ResetEvents();
 
-            Debugger.Log($"Signed out from Unity Services ({UUID})");
+            UUID = null;
         };
         public static event Action<RequestFailedException> OnSignInFail = (request) =>
         {
