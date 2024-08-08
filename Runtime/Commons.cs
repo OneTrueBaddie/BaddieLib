@@ -417,6 +417,8 @@ namespace Baddie.Commons
         public static event Action OnSignIn = () =>
         {
             UUID = AuthenticationService.Instance.PlayerId;
+
+            Debugger.Log($"Signed into Unity Services ({UUID})");
         };
         public static event Action OnSignOut = () =>
         {
@@ -424,11 +426,11 @@ namespace Baddie.Commons
 
             ResetEvents();
 
-            Debugger.Log($"Signed out from unity service ({UUID})", LogColour.Yellow);
+            Debugger.Log($"Signed out from Unity Services ({UUID})");
         };
         public static event Action<RequestFailedException> OnSignInFail = (request) =>
         {
-
+            Debugger.Log($"Failed to sign into Unity Services", LogColour.Red, Utils.LogType.Error);
         };
 
         static Action OnSignInOriginal = OnSignIn;
@@ -440,6 +442,7 @@ namespace Baddie.Commons
         /// </summary>
         public static Task Setup()
         {
+            Debugger.Log("Setup Unity Services", LogColour.Green);
             return UnityServices.State == ServicesInitializationState.Uninitialized ? UnityServices.InitializeAsync() : null;
         }
 
@@ -484,7 +487,18 @@ namespace Baddie.Commons
         /// <param name="name"></param>
         public static async void ChangePlayerName(string name)
         {
-            await AuthenticationService.Instance.UpdatePlayerNameAsync(name);
+            if (IsSignedIn())
+            {
+                var previous = AuthenticationService.Instance.PlayerName;
+
+                await AuthenticationService.Instance.UpdatePlayerNameAsync(name);
+
+                Debugger.Log($"Changed player name from '{previous}' to '{name}'", LogColour.Green);
+            }
+            else
+            {
+                Debugger.Log("Cannot change player name, player is not signed into Unity Services", LogColour.Red, Utils.LogType.Error);
+            }
         }
 
         /// <summary>
