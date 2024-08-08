@@ -334,7 +334,7 @@ namespace Baddie.Commons
         }
     }
 
-    public static class UniqueIdentifer
+    public static class UniqueIdentifier
     {
         public static GameObject Instaniate(string name, bool active = true)
         {
